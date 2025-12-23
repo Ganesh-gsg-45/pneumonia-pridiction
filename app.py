@@ -58,6 +58,7 @@ def load_model():
     except Exception as e:
         st.error(f"Error loading model: {e}")
         st.info("Please make sure the model file exists at 'models/pneumonia_model.h5'")
+        st.info("If deploying on Streamlit Cloud, ensure all required files are uploaded")
         return None
 
 # Preprocess image

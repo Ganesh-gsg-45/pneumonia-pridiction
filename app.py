@@ -1,9 +1,15 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import plotly.graph_objects as go
 from io import BytesIO
 import os
+
+# Try to import plotly
+try:
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
 
 # Try to import TensorFlow
 try:
@@ -200,30 +206,34 @@ def main():
             
             # Visualization
             st.subheader("📈 Confidence Visualization")
-            
-            categories = ['Normal', 'Pneumonia']
-            confidences = [normal_conf, pneumonia_conf]
-            colors = ['#28a745' if normal_conf > pneumonia_conf else '#6c757d',
-                     '#dc3545' if pneumonia_conf > normal_conf else '#6c757d']
-            
-            fig = go.Figure()
-            fig.add_trace(go.Bar(
-                y=categories,
-                x=confidences,
-                orientation='h',
-                marker_color=colors,
-                text=[f'{conf:.1f}%' for conf in confidences],
-                textposition='outside'
-            ))
-            
-            fig.update_layout(
-                title='Prediction Confidence',
-                xaxis_title='Confidence (%)',
-                xaxis_range=[0, 100],
-                showlegend=False
-            )
-            
-            st.plotly_chart(fig)
+            if PLOTLY_AVAILABLE:
+                categories = ['Normal', 'Pneumonia']
+                confidences = [normal_conf, pneumonia_conf]
+                colors = ['#28a745' if normal_conf > pneumonia_conf else '#6c757d',
+                         '#dc3545' if pneumonia_conf > normal_conf else '#6c757d']
+                
+                fig = go.Figure()
+                fig.add_trace(go.Bar(
+                    y=categories,
+                    x=confidences,
+                    orientation='h',
+                    marker_color=colors,
+                    text=[f'{conf:.1f}%' for conf in confidences],
+                    textposition='outside'
+                ))
+                
+                fig.update_layout(
+                    title='Prediction Confidence',
+                    xaxis_title='Confidence (%)',
+                    xaxis_range=[0, 100],
+                    showlegend=False
+                )
+                
+                st.plotly_chart(fig)
+            else:
+                st.info("Visualization not available due to missing plotly library.")
+                st.write(f"Normal: {normal_conf:.2f}%")
+                st.write(f"Pneumonia: {pneumonia_conf:.2f}%")
             
             # Interpretation
             st.subheader("🔬 Interpretation")

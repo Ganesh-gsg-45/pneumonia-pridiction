@@ -2,8 +2,6 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-plt.use('Agg')
-import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
 import os

@@ -1,8 +1,7 @@
 import streamlit as st
 import numpy as np
 from PIL import Image
-import matplotlib.pyplot as plt
-import seaborn as sns
+import plotly.graph_objects as go
 from io import BytesIO
 import os
 
@@ -201,25 +200,30 @@ def main():
             
             # Visualization
             st.subheader("📈 Confidence Visualization")
-            fig, ax = plt.subplots(figsize=(8, 5))
             
             categories = ['Normal', 'Pneumonia']
             confidences = [normal_conf, pneumonia_conf]
             colors = ['#28a745' if normal_conf > pneumonia_conf else '#6c757d',
                      '#dc3545' if pneumonia_conf > normal_conf else '#6c757d']
             
-            bars = ax.barh(categories, confidences, color=colors)
-            ax.set_xlabel('Confidence (%)', fontsize=12)
-            ax.set_xlim(0, 100)
-            ax.set_title('Prediction Confidence', fontsize=14, fontweight='bold')
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                y=categories,
+                x=confidences,
+                orientation='h',
+                marker_color=colors,
+                text=[f'{conf:.1f}%' for conf in confidences],
+                textposition='outside'
+            ))
             
-            # Add value labels on bars
-            for i, (bar, conf) in enumerate(zip(bars, confidences)):
-                ax.text(conf + 2, i, f'{conf:.1f}%', 
-                       va='center', fontweight='bold')
+            fig.update_layout(
+                title='Prediction Confidence',
+                xaxis_title='Confidence (%)',
+                xaxis_range=[0, 100],
+                showlegend=False
+            )
             
-            plt.tight_layout()
-            st.pyplot(fig)
+            st.plotly_chart(fig)
             
             # Interpretation
             st.subheader("🔬 Interpretation")

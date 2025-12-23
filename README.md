@@ -303,4 +303,4 @@ For questions or feedback, please open an issue on GitHub or contact the maintai
 
 ---
 
-**Developed with ❤️ for advancing medical AI research**
+**Developed with  for advancing medical AI research**

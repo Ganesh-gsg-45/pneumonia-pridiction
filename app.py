@@ -1,11 +1,19 @@
 import streamlit as st
-import tensorflow as tf
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 import seaborn as sns
 from io import BytesIO
 import os
+
+# Try to import TensorFlow
+try:
+    import tensorflow as tf
+    TENSORFLOW_AVAILABLE = True
+except ImportError:
+    TENSORFLOW_AVAILABLE = False
+    st.error("TensorFlow is not installed. Please check your requirements.txt file.")
+    st.stop()
 
 # Page configuration
 st.set_page_config(

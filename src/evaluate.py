@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from sklearn.metrics import classification_report,confusion_matrix,precision_recall_curve
+from sklearn.metrics import classification_report,confusion_matrix,precision_recall_curve,roc_auc_score,roc_curve
 import numpy as np 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -35,3 +35,17 @@ plt.xlabel('Predicted')
 plt.title('Confusion Matrix')
 plt.savefig('models/confusion_matrix.png')
 plt.show()
+predictions=model.predict(test_generator)
+auc_score=roc_auc_score(y_true,predictions)
+print(f"Auc-roc score:{auc_score:.4f}")
+fpr,tpr,thresholds=roc_curve(y_true,predictions)
+plt.figure(figsize=(8,6))
+plt.plot(fpr,tpr,label=f'AUC={auc_score:.3f}')
+plt.plot([0,1],[0,1],'k',label='Random')
+plt.xlabel('false positive rate')
+plt.ylabel('true positive rate')
+plt.title('roc curve')
+plt.legend()
+plt.savefig('models/roc_curve.png')
+plt.show()
+

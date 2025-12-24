@@ -115,7 +115,6 @@ dmypy.json
 
 # Machine Learning / Data Science
 # Model files
-*.h5
 *.hdf5
 *.pb
 *.pkl
@@ -126,6 +125,9 @@ dmypy.json
 *.ckpt
 *.pth
 *.pt
+# Keep specific model files for deployment
+!models/pneumonia_model.h5
+!models/pneumonia_model_best.h5
 
 # Data files
 *.csv

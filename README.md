@@ -31,8 +31,8 @@ An AI-powered medical image analysis system that uses Convolutional Neural Netwo
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- TensorFlow 2.x
+- Python 3.11.0
+- TensorFlow 2.15.0
 - Streamlit
 - Required Python packages (see requirements.txt)
 
@@ -133,9 +133,9 @@ data/chest_xray/
 The CNN model consists of:
 
 - **Input Layer**: 224x224x1 grayscale images
-- **Convolutional Layers**: 4 Conv2D layers with increasing filters (32, 64, 128, 128)
+- **Convolutional Layers**: 4 Conv2D layers with BatchNormalization and increasing filters (32, 64, 128, 128)
 - **Pooling Layers**: MaxPooling2D layers for downsampling
-- **Regularization**: Dropout layer (0.5) to prevent overfitting
+- **Regularization**: Dropout layers (0.5 after Flatten, 0.3 before Dense) to prevent overfitting
 - **Dense Layers**: 512 neurons with ReLU activation
 - **Output Layer**: Single neuron with sigmoid activation for binary classification
 
@@ -166,26 +166,37 @@ Non-trainable params: 0
 
 - **Image Size**: 224x224 pixels
 - **Batch Size**: 32
-- **Epochs**: 10
+- **Epochs**: 15 (with early stopping)
+- **Learning Rate**: 0.0001
 - **Optimizer**: Adam
 - **Loss Function**: Binary Crossentropy
-- **Metrics**: Accuracy
+- **Metrics**: Accuracy, Precision, Recall
+
+### Advanced Features
+
+- **Early Stopping**: Monitors validation loss with patience of 5 epochs
+- **Model Checkpointing**: Saves the best model based on validation accuracy
+- **Class Weighting**: Handles imbalanced dataset by computing balanced class weights
+- **Regularization**: BatchNormalization and Dropout layers
 
 ### Data Augmentation
 
-- Random rotation (±15°)
-- Width and height shift (±10%)
+- Random rotation (±20°)
+- Width and height shift (±20%)
+- Shear transformation (±15°)
+- Zoom range (±15%)
 - Horizontal flipping
 - Rescaling to [0,1] range
 
 ##  Evaluation
 
-The model is evaluated using standard classification metrics:
+The model is evaluated using comprehensive classification metrics:
 
 - **Accuracy**: Overall prediction accuracy
 - **Precision**: True Positives / (True Positives + False Positives)
 - **Recall**: True Positives / (True Positives + False Negatives)
 - **F1-Score**: Harmonic mean of precision and recall
+- **AUC-ROC**: Area Under the Receiver Operating Characteristic curve
 
 ### Sample Results
 
@@ -205,17 +216,21 @@ The Streamlit application provides:
 
 - **Image Upload**: Support for PNG, JPG, JPEG formats
 - **Real-time Analysis**: Instant prediction with confidence scores
-- **Visual Results**: Interactive charts and progress bars
+- **Visual Results**: Interactive Plotly charts and progress bars
 - **Confidence Visualization**: Bar charts showing prediction probabilities
 - **Medical Disclaimer**: Clear warnings about educational use only
 
 ### Interface Features
 
-- Drag-and-drop image upload
+- Drag-and-drop image upload with image preview
 - Side panel with model information and usage instructions
 - Color-coded prediction results (green for normal, red for pneumonia)
-- Confidence meters and visualization charts
+- Confidence meters and progress bars for both classes
+- Interactive Plotly bar charts for confidence visualization
+- Interpretation section with medical recommendations
+- Custom CSS styling for enhanced user experience
 - Responsive design for different screen sizes
+- Enhanced error handling and loading states
 
 ##  Results
 
@@ -227,6 +242,10 @@ The Streamlit application provides:
 
 ![Confusion Matrix](models/confusion_matrix.png)
 
+### ROC Curve
+
+![ROC Curve](models/roc_curve.png)
+
 ### Performance Metrics
 
 - **Training Accuracy**: ~95%
@@ -234,6 +253,7 @@ The Streamlit application provides:
 - **Test Accuracy**: ~88%
 - **Precision (Pneumonia)**: 87%
 - **Recall (Pneumonia)**: 95%
+- **AUC-ROC**: ~0.93
 
 ##  Project Structure
 
@@ -242,6 +262,7 @@ pneumonia-prediction/
 ├── app.py                      # Streamlit web application
 ├── README.md                   # Project documentation
 ├── requirements.txt            # Python dependencies
+├── runtime.txt                 # Python runtime version
 ├── data/
 │   └── chest_xray/            # Dataset directory
 │       ├── train/
@@ -249,8 +270,10 @@ pneumonia-prediction/
 │       └── test/
 ├── models/                     # Trained models and outputs
 │   ├── pneumonia_model.h5      # Trained CNN model
+│   ├── pneumonia_model_best.h5 # Best model checkpoint
 │   ├── training_history.png    # Training visualization
 │   ├── confusion_matrix.png    # Evaluation results
+│   ├── roc_curve.png          # ROC curve visualization
 │   └── notebook/
 │       └── eda.ipynb          # Exploratory data analysis
 └── src/                       # Source code

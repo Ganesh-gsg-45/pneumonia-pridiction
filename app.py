@@ -106,7 +106,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Model path - works on both local and Hugging Face
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "pneumonia_model.h5")
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "pneumonia_model_best.h5")
 
 # Load pneumonia detection model
 @st.cache_resource

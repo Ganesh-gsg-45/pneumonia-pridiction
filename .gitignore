@@ -179,3 +179,10 @@ Thumbs.db
 
 # Streamlit alternate app file (not used for HF Space)
 appp.py
+
+# Deployment: exclude generated plots/images (keeps git push small)
+*.png
+*.jpg
+*.jpeg
+*.gif
+

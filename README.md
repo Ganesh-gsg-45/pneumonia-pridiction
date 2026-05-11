@@ -3,12 +3,9 @@ title: PneumoVision
 emoji: 🫁
 colorFrom: blue
 colorTo: purple
-sdk: streamlit
-sdk_version: 1.29.0
-app_file: app.py
+sdk: docker
 pinned: false
 license: mit
-python_version: "3.11"
 ---
 
 # 🫁 PneumoVision: Pneumonia Detection from Chest X-Ray Images

@@ -191,4 +191,4 @@ if __name__ == '__main__':
     print("🫁  PneumoVision — Flask")
     print(f"   Groq AI      : {'✅ Connected' if OPENAI_AVAILABLE else '❌ Set GROQ_API_KEY in .env'}")
     print(f"   Model        : {'✅ Found' if os.path.exists(MODEL_PATH) else '❌ Not found'}")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=7860)

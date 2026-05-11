@@ -1,5 +1,5 @@
 ---
-title: Pneumonia Detection AI
+title: PneumoVision
 emoji: 🫁
 colorFrom: blue
 colorTo: purple
@@ -11,24 +11,24 @@ license: mit
 python_version: "3.11"
 ---
 
-# 🫁 Pneumonia Detection from Chest X-Ray Images
+# 🫁 PneumoVision: Pneumonia Detection from Chest X-Ray Images
 
-An AI-powered medical image analysis system combining CNN for pneumonia detection with SambaNova Cloud AI for intelligent medical assistance.
+An AI-powered medical image analysis system combining CNN for pneumonia detection with Groq Cloud AI for intelligent medical assistance.
 
 ## 🚀 Quick Start
 
 This Space uses:
 - **TensorFlow CNN** for X-ray analysis
-- **SambaNova Cloud AI** for medical chatbot
+- **Groq Cloud AI** (LLaMA 3.3 70B) for medical chatbot
 - **Streamlit** for the web interface
 
 ## ⚙️ Configuration
 
-This app requires a SambaNova API key. The Space owner has configured this in the Secrets section.
+This app requires a Groq API key. The Space owner has configured this in the Secrets section.
 
 For your own deployment:
-1. Get API key from https://cloud.sambanova.ai
-2. Add it to Space Secrets as `SAMBANOVA_API_KEY`
+1. Get API key from https://console.groq.com
+2. Add it to Space Secrets as `GROQ_API_KEY`
 
 ## ⚠️ Medical Disclaimer
 

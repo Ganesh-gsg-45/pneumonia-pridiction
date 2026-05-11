@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PneumoVision</title>
+  <meta name="description" content="AI-powered pneumonia detection from chest X-ray images with smart medical assistant."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <!-- Firebase Scripts -->
+  <script type="module" src="{{ url_for('static', filename='js/firebase-auth.js') }}"></script>
+</head>
+<body class="hidden-until-auth">
+
+<!-- ── Navbar ─────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="nav-brand">
+    <span class="brand-icon">🫁</span>
+    <span class="brand-text">Pneumo<strong>Vision</strong></span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('analysis')" id="tab-btn-analysis">
+      📸 X-Ray Analysis
+    </button>
+    <button class="nav-tab" onclick="switchTab('chat')" id="tab-btn-chat">
+      🩺 AI Assistant
+      {% if ai_connected %}<span class="badge green">Live</span>{% else %}<span class="badge orange">Offline</span>{% endif %}
+    </button>
+    <button class="nav-tab" onclick="switchTab('about')" id="tab-btn-about">
+      ℹ️ About
+    </button>
+  </div>
+  <div class="nav-right">
+    <span id="userEmailDisplay" class="user-email"></span>
+    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+    <button class="btn-logout" id="logoutBtn" title="Logout">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      Logout
+    </button>
+  </div>
+</nav>
+
+<!-- ── Disclaimer ─────────────────────────────────────────────── -->
+<div class="disclaimer">
+  ⚠️ <strong>Educational tool only.</strong> Not a medical device. Always consult a qualified healthcare professional.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 1 — X-Ray Analysis
+════════════════════════════════════════════════════════════════ -->
+<div id="tab-analysis" class="tab-content active">
+  <div class="page-header">
+    <h1>Chest X-Ray Pneumonia Detection</h1>
+    <p>Upload a chest X-ray image for instant AI-powered analysis and personalized recommendations.</p>
+  </div>
+
+  <div class="analysis-grid">
+
+    <!-- Upload Panel -->
+    <div class="card upload-card">
+      <h2 class="card-title">📤 Upload X-Ray Image</h2>
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-icon" id="dropIcon">🩻</div>
+        <p class="drop-primary" id="dropPrimary">Click or drag &amp; drop your X-ray</p>
+        <p class="drop-secondary">PNG, JPG, JPEG supported</p>
+        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg" hidden/>
+      </div>
+
+      <div id="imagePreviewWrap" class="preview-wrap hidden">
+        <img id="imagePreview" class="preview-img" alt="Uploaded X-Ray"/>
+        <button class="btn-clear" onclick="clearImage()">✕ Clear</button>
+      </div>
+
+      <button class="btn-primary" id="analyzeBtn" onclick="analyzeXray()" disabled>
+        <span id="analyzeBtnText">🔍 Analyze X-Ray</span>
+        <span id="analyzeBtnSpinner" class="spinner hidden"></span>
+      </button>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="card results-card" id="resultsCard">
+      <h2 class="card-title">📊 Analysis Results</h2>
+
+      <div id="resultsPlaceholder" class="placeholder-msg">
+        <div class="placeholder-icon">📋</div>
+        <p>Upload and analyze an X-ray to see results here.</p>
+      </div>
+
+      <div id="resultsContent" class="hidden">
+
+        <!-- Result badge -->
+        <div class="result-badge" id="resultBadge">
+          <span id="resultIcon"></span>
+          <div>
+            <div class="result-label" id="resultLabel"></div>
+            <div class="result-severity" id="resultSeverity"></div>
+          </div>
+          <div class="result-conf" id="resultConf"></div>
+        </div>
+
+        <!-- Confidence bars -->
+        <div class="bars-section">
+          <div class="bar-row">
+            <span class="bar-label" id="bar1Label"></span>
+            <div class="bar-track">
+              <div class="bar-fill" id="bar1Fill"></div>
+            </div>
+            <span class="bar-pct" id="bar1Pct"></span>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label" id="bar2Label"></span>
+            <div class="bar-track">
+              <div class="bar-fill bar-fill-dim" id="bar2Fill"></div>
+            </div>
+            <span class="bar-pct" id="bar2Pct"></span>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="recs-header">🎯 Top 5 Recommendations</div>
+        <div id="recsList" class="recs-list"></div>
+
+        <button class="btn-secondary mt-16" onclick="switchTab('chat')">
+          💬 Ask AI About Your Results →
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /analysis-grid -->
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 2 — AI Assistant
+════════════════════════════════════════════════════════════════ -->
+<div id="tab-chat" class="tab-content hidden">
+  <div class="page-header">
+    <h1>Smart Medical Assistant</h1>
+    <p>Ask anything about pneumonia — symptoms, treatment, prevention, diet &amp; more.</p>
+  </div>
+
+  <div class="chat-container">
+
+    <!-- Quick buttons -->
+    <div class="quick-btns">
+      <button class="quick-btn" onclick="sendQuick('What are pneumonia symptoms?')">🩺 Symptoms</button>
+      <button class="quick-btn" onclick="sendQuick('What are the treatment options?')">💊 Treatment</button>
+      <button class="quick-btn" onclick="sendQuick('How to prevent pneumonia?')">🛡️ Prevention</button>
+      <button class="quick-btn" onclick="sendQuick('What should I eat during recovery?')">🥗 Diet</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg msg-bot">
+        <div class="msg-avatar">🤖</div>
+        <div class="msg-bubble">
+          <strong>Hello! I'm your Smart Medical Assistant.</strong><br/><br/>
+          I can help with pneumonia symptoms, treatment, prevention, diet &amp; recovery.<br/>
+          If you analyzed an X-ray, I can discuss your results too!<br/><br/>
+          Try the quick buttons above or type your question below 💬
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      <textarea id="chatInput" class="chat-input" rows="1"
+        placeholder="Ask about pneumonia, your X-ray results..."
+        onkeydown="handleEnter(event)"></textarea>
+      <button class="btn-send" id="sendBtn" onclick="sendMessage()">
+        <span id="sendBtnText">➤</span>
+        <span id="sendSpinner" class="spinner hidden"></span>
+      </button>
+    </div>
+    <p class="chat-hint">Press Enter to send • Shift+Enter for new line</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 3 — About
+════════════════════════════════════════════════════════════════ -->
+<div id="tab-about" class="tab-content hidden">
+  <div class="page-header">
+    <h1>About This Project</h1>
+    <p>Everything about how PneumoVision was built, what it does, and how it works.</p>
+  </div>
+
+  <div class="about-grid">
+
+    <!-- What is this project -->
+    <div class="card about-card">
+      <div class="about-icon">🫁</div>
+      <h2 class="card-title">What Is This Project?</h2>
+      <p>PneumoVision is an <strong>educational medical imaging tool</strong> that uses Artificial Intelligence to analyze chest X-ray images and detect signs of pneumonia.</p>
+      <br/>
+      <p>The system combines two AI technologies:</p>
+      <ul class="about-list">
+        <li>🧠 <strong>CNN Model</strong> — scans and classifies your X-ray as NORMAL or PNEUMONIA</li>
+        <li>🤖 <strong>LLM Chatbot</strong> — answers medical questions about symptoms, treatment & recovery</li>
+      </ul>
+      <div class="about-disclaimer">
+        ⚠️ This is an <strong>educational tool only</strong> — not a clinical diagnostic device. Always consult a qualified doctor.
+      </div>
+    </div>
+
+    <!-- How it was developed -->
+    <div class="card about-card">
+      <div class="about-icon">🛠️</div>
+      <h2 class="card-title">Development Process</h2>
+      <div class="process-steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <strong>Data Collection</strong>
+            <p>Used the Kaggle Chest X-Ray Images dataset containing thousands of labeled chest X-rays split into NORMAL and PNEUMONIA categories.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <strong>Data Preprocessing</strong>
+            <p>All images converted to <strong>grayscale</strong> and resized to <strong>224×224 pixels</strong>. Pixel values normalized to 0–1 range. Class imbalance handled using <strong>class weights</strong>.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <strong>Data Augmentation</strong>
+            <p>Applied rotation, width/height shifts, shear, zoom, and horizontal flip using <code>ImageDataGenerator</code> to improve generalization and prevent overfitting.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <strong>Model Architecture (CNN)</strong>
+            <p>Designed a custom 4-block CNN with Conv2D layers, BatchNormalization, MaxPooling, and Dropout layers from scratch using Keras Sequential API.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <strong>Training</strong>
+            <p>Trained for up to 15 epochs using <strong>Adam optimizer</strong> (lr=0.0001) with <strong>EarlyStopping</strong> and <strong>ModelCheckpoint</strong> callbacks to save the best model.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <strong>Evaluation</strong>
+            <p>Evaluated on the test set using Accuracy, Precision, Recall, AUC-ROC score, Confusion Matrix, and ROC Curve visualization.</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <strong>Deployment</strong>
+            <p>Built a web interface using Flask (HTML/CSS/JS frontend) and integrated <strong>Groq Cloud AI</strong> (LLaMA 3.3 70B) for the medical chatbot assistant.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CNN Architecture -->
+    <div class="card about-card">
+      <div class="about-icon">🏗️</div>
+      <h2 class="card-title">CNN Model Architecture</h2>
+      <p style="margin-bottom:16px;">Developed entirely using <strong>TensorFlow / Keras</strong> — a custom CNN built from scratch, not a pretrained model.</p>
+      <div class="arch-diagram">
+        <div class="arch-row input-row">📸 Input: 224 × 224 × 1 (Grayscale)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row conv-row">Conv2D (32 filters) + BatchNorm + MaxPool</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row conv-row">Conv2D (64 filters) + BatchNorm + MaxPool</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row conv-row">Conv2D (128 filters) + BatchNorm + MaxPool</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row conv-row">Conv2D (128 filters) + BatchNorm + MaxPool</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row dense-row">Flatten → Dropout(50%) → Dense(512) → Dropout(30%)</div>
+        <div class="arch-arrow">↓</div>
+        <div class="arch-row output-row">Dense(1, Sigmoid) → NORMAL / PNEUMONIA</div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-chip">🎯 Accuracy: 87%</div>
+        <div class="metric-chip">📈 AUC-ROC: 95.2%</div>
+        <div class="metric-chip">⚖️ Loss: Binary Crossentropy</div>
+        <div class="metric-chip">🔧 Optimizer: Adam</div>
+      </div>
+    </div>
+
+    <!-- Tech stack -->
+    <div class="card about-card">
+      <div class="about-icon">⚙️</div>
+      <h2 class="card-title">Technology Stack</h2>
+      <div class="tech-grid">
+        <div class="tech-item">
+          <div class="tech-icon">🧠</div>
+          <div class="tech-name">TensorFlow / Keras</div>
+          <div class="tech-role">CNN model training &amp; inference</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🐍</div>
+          <div class="tech-name">Python 3.11</div>
+          <div class="tech-role">Core programming language</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🌐</div>
+          <div class="tech-name">Flask</div>
+          <div class="tech-role">Web application framework</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🖼️</div>
+          <div class="tech-name">Pillow / OpenCV</div>
+          <div class="tech-role">Image preprocessing</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🤖</div>
+          <div class="tech-name">Meta-LLaMA 3.3 70B</div>
+          <div class="tech-role">Medical chatbot (Groq Cloud)</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🔢</div>
+          <div class="tech-name">NumPy / Pandas</div>
+          <div class="tech-role">Data processing &amp; analysis</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">📊</div>
+          <div class="tech-name">Scikit-learn</div>
+          <div class="tech-role">Metrics &amp; evaluation</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon">🎨</div>
+          <div class="tech-name">HTML / CSS / JS</div>
+          <div class="tech-role">Frontend interface</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Developed by -->
+    <div class="card about-card about-card-full">
+      <div class="about-icon">👨‍💻</div>
+      <h2 class="card-title">Developed By</h2>
+      <div class="dev-section">
+        <div class="dev-badge">
+          <div class="dev-avatar">🧑‍🔬</div>
+          <div class="dev-info">
+            <div class="dev-name">T. Ganesh</div>
+            <div class="dev-role">AI / ML Developer</div>
+            <div class="dev-tags">
+              <span class="tag">Deep Learning</span>
+              <span class="tag">Medical AI</span>
+            </div>
+          </div>
+        </div>
+        <div class="dev-desc">
+          <p>This project was developed as an <strong>educational AI application</strong> demonstrating the use of <strong>Convolutional Neural Networks (CNN)</strong> for medical image classification.</p>
+          <br/>
+          <p>The CNN was designed, trained, and evaluated entirely from scratch — covering the complete ML pipeline from raw data to a deployed web application with an intelligent chat assistant.</p>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /about-grid -->
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────────── -->
+<footer class="footer">
+  🫁 <strong>PneumoVision</strong> &nbsp;|&nbsp; TensorFlow CNN + Groq Cloud AI (LLaMA 3.3 70B) &nbsp;|&nbsp;
+  <em>Educational project — not for clinical use</em>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

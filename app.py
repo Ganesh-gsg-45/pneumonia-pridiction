@@ -460,9 +460,9 @@ with tab1:
 
         if uploaded_file:
             image = Image.open(uploaded_file)
-            st.image(image, caption="📸 Uploaded X-Ray", width='stretch')
+            st.image(image, caption="📸 Uploaded X-Ray", use_container_width=True)
 
-            if st.button("🔍 Analyze X-Ray & Get Recommendations", type="primary", width='stretch'):
+            if st.button("🔍 Analyze X-Ray & Get Recommendations", type="primary", use_container_width=True):
                 model = load_model()
                 if model:
                     with st.spinner("🤖 Analyzing X-ray with AI..."):
@@ -554,7 +554,7 @@ with tab2:
     
     for i, (label, question) in enumerate(quick_questions):
         with [col1, col2, col3, col4][i]:
-            if st.button(label, width='stretch'):
+            if st.button(label, use_container_width=True):
                 if "messages" not in st.session_state:
                     st.session_state.messages = []
                 st.session_state.messages.append({"role": "user", "content": question})

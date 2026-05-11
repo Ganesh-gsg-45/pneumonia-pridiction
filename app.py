@@ -460,7 +460,7 @@ with tab1:
 
         if uploaded_file:
             image = Image.open(uploaded_file)
-            st.image(image, caption="📸 Uploaded X-Ray", use_container_width=True)
+            st.image(image, caption="📸 Uploaded X-Ray", use_column_width=True)
 
             if st.button("🔍 Analyze X-Ray & Get Recommendations", type="primary", use_container_width=True):
                 model = load_model()
@@ -596,21 +596,28 @@ Ask me anything! 💬"""}
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # Chat input
-    if prompt := st.chat_input("Ask about pneumonia, symptoms, treatment, your X-ray..."):
+    # Chat input — use text_input + button (st.chat_input is not allowed inside st.tabs in Streamlit 1.29)
+    with st.form(key="chat_form", clear_on_submit=True):
+        col_input, col_send = st.columns([5, 1])
+        with col_input:
+            user_input = st.text_input(
+                "Your question",
+                placeholder="Ask about pneumonia, symptoms, treatment, your X-ray...",
+                label_visibility="collapsed"
+            )
+        with col_send:
+            submitted = st.form_submit_button("Send ➤", use_container_width=True)
+
+    if submitted and user_input.strip():
+        prompt = user_input.strip()
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
 
         # Get response
         pred_result = st.session_state.pred_result if st.session_state.analysis_done else None
         confidence = st.session_state.confidence if st.session_state.analysis_done else None
-
         response = ask_smart_assistant(prompt, pred_result, confidence)
-
         st.session_state.messages.append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.markdown(response)
+        st.rerun()
 
 # Footer
 st.markdown("---")

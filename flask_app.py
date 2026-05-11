@@ -171,7 +171,9 @@ def analyze():
                         'severity': rec['severity'], 'color': rec['color'],
                         'icon': rec['icon'], 'recommendations': rec['recommendations']})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f"Server Error: {str(e)}"}), 500
 
 @app.route('/chat', methods=['POST'])
 def chat():

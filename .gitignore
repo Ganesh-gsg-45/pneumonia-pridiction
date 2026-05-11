@@ -133,6 +133,8 @@ dmypy.json
 *.csv
 *.json
 *.txt
+!requirements.txt
+!runtime.txt
 data/
 !data/__init__.py
 

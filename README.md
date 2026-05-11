@@ -8,6 +8,7 @@ sdk_version: 1.29.0
 app_file: app.py
 pinned: false
 license: mit
+python_version: "3.11"
 ---
 
 # 🫁 Pneumonia Detection from Chest X-Ray Images

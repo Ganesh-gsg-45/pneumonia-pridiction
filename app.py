@@ -52,12 +52,14 @@ logging.getLogger('tensorflow').setLevel(logging.ERROR)
 logging.getLogger('keras').setLevel(logging.ERROR)
 logging.getLogger('absl').setLevel(logging.ERROR)
 
-# Load environment variables
-load_dotenv()
+# Load environment variables — explicit path so it works from any working directory
+_ENV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(dotenv_path=_ENV_PATH, override=True)
 
 # SambaNova API integration (optional)
 SAMBANOVA_API_KEY = os.getenv("SAMBANOVA_API_KEY")
 OPENAI_AVAILABLE = False
+client = None  # initialise so it's always defined
 
 if SAMBANOVA_API_KEY:
     try:
@@ -69,9 +71,8 @@ if SAMBANOVA_API_KEY:
         )
         OPENAI_AVAILABLE = True
     except ImportError:
-        st.warning("OpenAI library not available. Chat features will be limited to built-in knowledge.")
-else:
-    st.info("SambaNova API key not found. Chat features will use built-in knowledge base.")
+        pass  # warning shown after st.set_page_config() below
+# Status messages are shown AFTER st.set_page_config() to avoid Streamlit errors
 
 # Try to import TensorFlow
 try:
@@ -83,13 +84,19 @@ except ImportError:
     st.error("TensorFlow is not installed. Run: pip install tensorflow")
     st.stop()
 
-# Page configuration
+# Page configuration — MUST be the very first Streamlit call
 st.set_page_config(
     page_title="Pneumonia Detection AI + Smart Assistant",
     page_icon="🫁",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Show API key status now that set_page_config has been called
+if SAMBANOVA_API_KEY and not OPENAI_AVAILABLE:
+    st.warning("OpenAI library not available. Chat features will be limited to built-in knowledge.")
+elif not SAMBANOVA_API_KEY:
+    st.info("💡 SambaNova API key not found in .env file. Chat will use built-in knowledge base.")
 
 # Custom CSS
 st.markdown("""
@@ -356,6 +363,16 @@ Current X-ray Analysis Context:
         {"role": "system", "content": system_prompt + context},
         {"role": "user", "content": user_message}
     ]
+
+    if not OPENAI_AVAILABLE or client is None:
+        return """⚠️ **SambaNova AI not connected.**
+
+To enable AI chat:
+1. Add your key to the `.env` file: `SAMBANOVA_API_KEY=your_key_here`
+2. Get a free key at https://cloud.sambanova.ai
+3. Restart the app after saving
+
+Meanwhile, try the quick-question buttons above — they use the built-in knowledge base!"""
 
     try:
         with st.spinner("🤔 Thinking via SambaNova Cloud..."):

@@ -30,4 +30,5 @@ For your own deployment:
 ## ⚠️ Medical Disclaimer
 
 This is an educational tool only. Not for clinical use. Always consult healthcare professionals.
+Ganesh
 

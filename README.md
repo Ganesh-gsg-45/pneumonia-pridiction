@@ -31,10 +31,3 @@ For your own deployment:
 
 This is an educational tool only. Not for clinical use. Always consult healthcare professionals.
 
----
-
-*See below for full documentation*
-
----
-
-[Rest of your existing README content goes here...]

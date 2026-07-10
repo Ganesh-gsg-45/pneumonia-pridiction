@@ -31,7 +31,3 @@ For your own deployment:
 
 This is an educational tool only. Not for clinical use. Always consult healthcare professionals.
 
-## ⚠️ Medical Disclaimer
-
-This is an educational tool only. Not for clinical use. Always consult healthcare professionals.
-

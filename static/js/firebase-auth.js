@@ -146,8 +146,8 @@ onAuthStateChanged(auth, (user) => {
     }
   } else {
     // No user is signed in.
-    if (!isAuthPage && currentPath === '/') {
-      // Protect the main app route
+    if (!isAuthPage) {
+      // Protect all non-auth routes → redirect to login
       window.location.href = '/login';
     } else {
       // Unhide the auth page content

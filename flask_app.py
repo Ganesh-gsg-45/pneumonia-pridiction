@@ -175,6 +175,10 @@ def analyze():
         traceback.print_exc()
         return jsonify({'error': f"Server Error: {str(e)}"}), 500
 
+@app.route('/predict', methods=['POST'])
+def predict_alias():
+    return analyze()
+
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.get_json()

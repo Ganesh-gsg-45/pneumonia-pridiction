@@ -32,7 +32,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (errorDiv) {
       errorDiv.textContent = message;
       errorDiv.classList.remove('hidden');
+      errorDiv.setAttribute('aria-hidden', 'false');
     }
+  };
+
+  const hideError = () => {
+    const errorDiv = document.getElementById('authError');
+    if (errorDiv) {
+      errorDiv.textContent = '';
+      errorDiv.classList.add('hidden');
+      errorDiv.setAttribute('aria-hidden', 'true');
+    }
+  };
+
+  const setButtonState = (button, busy) => {
+    if (!button) return;
+    button.disabled = busy;
+    button.setAttribute('aria-busy', busy ? 'true' : 'false');
+  };
+
+  const isEmailValid = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
   };
 
   // Handle Login
@@ -45,19 +65,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       const btn = document.getElementById('loginBtn');
       const txt = document.getElementById('loginBtnText');
       const spin = document.getElementById('loginSpinner');
-      const err = document.getElementById('authError');
 
-      btn.disabled = true;
+      if (!isEmailValid(email)) {
+        showError('Please enter a valid email address.');
+        return;
+      }
+
+      if (!password) {
+        showError('Please enter your password.');
+        return;
+      }
+
+      setButtonState(btn, true);
       txt.classList.add('hidden');
       spin.classList.remove('hidden');
-      err.classList.add('hidden');
+      hideError();
 
       try {
         await signInWithEmailAndPassword(auth, email, password);
         window.location.href = '/'; // Redirect to main app
       } catch (error) {
         showError("Login failed: " + error.message.replace('Firebase: ', ''));
-        btn.disabled = false;
+        setButtonState(btn, false);
         txt.classList.remove('hidden');
         spin.classList.add('hidden');
       }
@@ -75,24 +104,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       const btn = document.getElementById('signupBtn');
       const txt = document.getElementById('signupBtnText');
       const spin = document.getElementById('signupSpinner');
-      const err = document.getElementById('authError');
+
+      if (!isEmailValid(email)) {
+        showError('Please enter a valid email address.');
+        return;
+      }
+
+      if (!password) {
+        showError('Please enter a password.');
+        return;
+      }
 
       if (password !== confirmPassword) {
         showError("Passwords do not match");
         return;
       }
 
-      btn.disabled = true;
+      setButtonState(btn, true);
       txt.classList.add('hidden');
       spin.classList.remove('hidden');
-      err.classList.add('hidden');
+      hideError();
 
       try {
         await createUserWithEmailAndPassword(auth, email, password);
         window.location.href = '/'; // Redirect to main app
       } catch (error) {
         showError("Signup failed: " + error.message.replace('Firebase: ', ''));
-        btn.disabled = false;
+        setButtonState(btn, false);
         txt.classList.remove('hidden');
         spin.classList.add('hidden');
       }

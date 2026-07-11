@@ -466,38 +466,87 @@ body.hidden-until-auth {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding: 20px;
-  background: linear-gradient(rgba(6, 24, 20, 0.8), rgba(6, 24, 20, 0.95)), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
-  background-attachment: fixed;
+  padding: 24px;
+  background: radial-gradient(circle at top, rgba(79,121,247,.16), transparent 24%),
+              radial-gradient(circle at 100% 10%, rgba(156,110,247,.12), transparent 24%),
+              linear-gradient(180deg, #07131a 0%, #091924 45%, #0e1f34 100%);
 }
 
 .auth-container {
   width: 100%;
-  max-width: 420px;
-  padding: 40px;
+  max-width: 460px;
+  padding: 42px 36px;
+  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(7, 19, 34, 0.92);
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.32);
 }
 
 .auth-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
 }
 .auth-header .brand-icon {
   font-size: 48px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 .auth-header h2 {
-  font-size: 24px;
+  font-size: 26px;
   margin-bottom: 8px;
 }
 .auth-header p {
   color: var(--txt2);
-  font-size: 14px;
+  font-size: 15px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.auth-note {
+  color: var(--txt2);
+  font-size: 13px;
+  margin-top: 10px;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--txt);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.06);
+  color: var(--txt);
+  font-size: 15px;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.auth-input::placeholder {
+  color: rgba(255,255,255,0.55);
+}
+
+.auth-input:focus {
+  border-color: rgba(79,121,247,0.9);
+  background: rgba(255,255,255,0.12);
+  box-shadow: 0 0 0 4px rgba(79,121,247,0.12);
+}
+
+.auth-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  font-size: 16px;
 }
 
 .auth-btn {

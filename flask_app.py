@@ -194,7 +194,9 @@ def chat():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 7860))
     print("🫁  PneumoVision — Flask")
     print(f"   Groq AI      : {'✅ Connected' if OPENAI_AVAILABLE else '❌ Set GROQ_API_KEY in .env'}")
     print(f"   Model        : {'✅ Found' if os.path.exists(MODEL_PATH) else '❌ Not found'}")
-    app.run(debug=False, host='0.0.0.0', port=7860)
+    print(f"   Listening on : 0.0.0.0:{port}")
+    app.run(debug=False, host='0.0.0.0', port=port)

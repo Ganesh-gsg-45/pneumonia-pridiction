@@ -143,15 +143,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       await signInWithPopup(auth, googleProvider);
       window.location.href = '/';
     } catch (error) {
+      console.error('Google auth error', error);
       // Popup blocked fallback
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
         try {
           await signInWithRedirect(auth, googleProvider);
         } catch (redirectError) {
+          console.error('Google redirect error', redirectError);
           showError("Google redirect sign-in failed: " + redirectError.message.replace('Firebase: ', ''));
         }
+      } else if (error.code === 'auth/unauthorized-domain') {
+        showError("Google sign-in is blocked because this domain is not authorized in Firebase. Add your Hugging Face Space domain to Firebase Auth authorized domains.");
       } else {
-        showError("Google sign-in failed: " + error.message.replace('Firebase: ', ''));
+        showError("Google sign-in failed: " + error.code + " — " + error.message.replace('Firebase: ', ''));
       }
     }
   };
@@ -171,7 +175,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (redirectError) {
     // ignore if no redirect result present
     if (redirectError.code !== 'auth/no-auth-event') {
-      console.warn('Google redirect result error:', redirectError);
+      console.error('Google redirect result error:', redirectError);
+      showError("Google redirect result failed: " + redirectError.code + " — " + redirectError.message.replace('Firebase: ', ''));
     }
   }
 

@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut, 
   onAuthStateChanged 
@@ -23,7 +25,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Helper to show errors
   const showError = (message) => {
     const errorDiv = document.getElementById('authError');
@@ -103,7 +105,16 @@ document.addEventListener('DOMContentLoaded', () => {
       await signInWithPopup(auth, googleProvider);
       window.location.href = '/';
     } catch (error) {
-      showError("Google sign-in failed: " + error.message.replace('Firebase: ', ''));
+      // Popup blocked fallback
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectError) {
+          showError("Google redirect sign-in failed: " + redirectError.message.replace('Firebase: ', ''));
+        }
+      } else {
+        showError("Google sign-in failed: " + error.message.replace('Firebase: ', ''));
+      }
     }
   };
 
@@ -112,6 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const googleSignupBtn = document.getElementById('googleSignupBtn');
   if (googleSignupBtn) googleSignupBtn.addEventListener('click', handleGoogleAuth);
+
+  // Handle redirect result after Google redirect sign-in
+  try {
+    const result = await getRedirectResult(auth);
+    if (result && result.user) {
+      window.location.href = '/';
+    }
+  } catch (redirectError) {
+    // ignore if no redirect result present
+    if (redirectError.code !== 'auth/no-auth-event') {
+      console.warn('Google redirect result error:', redirectError);
+    }
+  }
 
   // Handle Logout
   const logoutBtn = document.getElementById('logoutBtn');

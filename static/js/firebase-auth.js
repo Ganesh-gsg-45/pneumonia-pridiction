@@ -57,6 +57,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   // Handle Login
+  const sendTokenToServer = async (idToken) => {
+    try {
+      const res = await fetch('/verify-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: idToken }),
+      });
+      return res.ok;
+    } catch (error) {
+      console.error('Token verification error', error);
+      return false;
+    }
+  };
+
+  const verifyCurrentUser = async (user) => {
+    if (!user) return false;
+    try {
+      const token = await user.getIdToken();
+      return await sendTokenToServer(token);
+    } catch (error) {
+      console.error('Failed to verify current user token', error);
+      return false;
+    }
+  };
+
   const loginForm = document.getElementById('loginForm');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
@@ -84,7 +109,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         await signInWithEmailAndPassword(auth, email, password);
-        window.location.href = '/'; // Redirect to main app
+        const user = auth.currentUser;
+        const verified = await verifyCurrentUser(user);
+        if (verified) {
+          window.location.href = '/';
+        } else {
+          showError('Login failed: unable to verify authentication.');
+          await auth.signOut();
+          setButtonState(btn, false);
+          txt.classList.remove('hidden');
+          spin.classList.add('hidden');
+        }
       } catch (error) {
         showError("Login failed: " + error.message.replace('Firebase: ', ''));
         setButtonState(btn, false);
@@ -128,7 +163,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        window.location.href = '/'; // Redirect to main app
+        const user = auth.currentUser;
+        const verified = await verifyCurrentUser(user);
+        if (verified) {
+          window.location.href = '/';
+        } else {
+          showError('Signup failed: unable to verify authentication.');
+          await auth.signOut();
+          setButtonState(btn, false);
+          txt.classList.remove('hidden');
+          spin.classList.add('hidden');
+        }
       } catch (error) {
         showError("Signup failed: " + error.message.replace('Firebase: ', ''));
         setButtonState(btn, false);
@@ -142,7 +187,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const handleGoogleAuth = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      window.location.href = '/';
+      const user = auth.currentUser;
+      const verified = await verifyCurrentUser(user);
+      if (verified) {
+        window.location.href = '/';
+      } else {
+        showError('Google sign-in failed: unable to verify authentication.');
+        await auth.signOut();
+      }
     } catch (error) {
       console.error('Google auth error', error);
       // Popup blocked fallback
@@ -171,7 +223,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const result = await getRedirectResult(auth);
     if (result && result.user) {
-      window.location.href = '/';
+      const verified = await verifyCurrentUser(result.user);
+      if (verified) {
+        window.location.href = '/';
+      } else {
+        showError('Google sign-in failed: unable to verify authentication.');
+        await auth.signOut();
+      }
     }
   } catch (redirectError) {
     // ignore if no redirect result present
@@ -187,39 +245,45 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoutBtn.addEventListener('click', async () => {
       try {
         await signOut(auth);
-        window.location.href = '/login';
+        window.location.href = '/logout';
       } catch (error) {
         console.error("Logout error", error);
+        window.location.href = '/logout';
       }
     });
   }
 
   // Global Auth State Observer (Route Guarding)
-  onAuthStateChanged(auth, (user) => {
+  onAuthStateChanged(auth, async (user) => {
     const currentPath = window.location.pathname;
     const isAuthPage = currentPath === '/login' || currentPath === '/signup';
 
     if (user) {
-      // User is signed in.
-      if (isAuthPage) {
-        // Don't let logged in users access login/signup pages
-        window.location.href = '/';
-      } else {
-        // Unhide the main app content once we confirm they are logged in
-        document.body.classList.remove('hidden-until-auth');
-        // Update UI with user email if element exists
-        const userEmailDisplay = document.getElementById('userEmailDisplay');
-        if (userEmailDisplay) {
-          userEmailDisplay.textContent = user.email;
+      const verified = await verifyCurrentUser(user);
+      if (!verified) {
+        await auth.signOut();
+        if (!isAuthPage) {
+          window.location.href = '/login';
+        } else {
+          document.body.classList.remove('hidden-until-auth');
         }
+        return;
+      }
+
+      if (isAuthPage) {
+        window.location.href = '/';
+        return;
+      }
+
+      document.body.classList.remove('hidden-until-auth');
+      const userEmailDisplay = document.getElementById('userEmailDisplay');
+      if (userEmailDisplay) {
+        userEmailDisplay.textContent = user.email;
       }
     } else {
-      // No user is signed in.
       if (!isAuthPage) {
-        // Protect all non-auth routes → redirect to login
         window.location.href = '/login';
       } else {
-        // Unhide the auth page content
         document.body.classList.remove('hidden-until-auth');
       }
     }

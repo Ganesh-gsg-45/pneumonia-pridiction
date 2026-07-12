@@ -1,5 +1,6 @@
-import os, io, warnings, logging
-from flask import Flask, render_template, request, jsonify
+import os, io, warnings, logging, json
+from functools import wraps
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
@@ -15,7 +16,7 @@ _ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=_ENV, override=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-print(f"[DEBUG] GROQ_API_KEY loaded: {'YES → ' + GROQ_API_KEY[:8] + '...' if GROQ_API_KEY else 'NOT FOUND ❌'}")
+print(f"[DEBUG] GROQ_API_KEY loaded: {'YES' if GROQ_API_KEY else 'NOT FOUND ❌'}")
 OPENAI_AVAILABLE = False
 client = None
 
@@ -27,6 +28,37 @@ if GROQ_API_KEY:
         OPENAI_AVAILABLE = True
     except ImportError:
         pass
+
+try:
+    import firebase_admin
+    from firebase_admin import auth as firebase_auth, credentials as firebase_credentials
+
+    if not firebase_admin._apps:
+        firebase_cred = None
+        if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            firebase_cred = firebase_credentials.Certificate(
+                os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+        elif os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON"):
+            firebase_cred = firebase_credentials.Certificate(
+                json.loads(os.environ["FIREBASE_SERVICE_ACCOUNT_JSON"]))
+        else:
+            try:
+                firebase_cred = firebase_credentials.ApplicationDefault()
+            except Exception:
+                firebase_cred = None
+
+        firebase_admin.initialize_app(firebase_cred)
+
+    FIREBASE_ADMIN_AVAILABLE = True
+except ImportError:
+    firebase_admin = None
+    firebase_auth = None
+    FIREBASE_ADMIN_AVAILABLE = False
+except Exception as e:
+    print(f"[WARN] Firebase admin init failed: {e}")
+    firebase_admin = None
+    firebase_auth = None
+    FIREBASE_ADMIN_AVAILABLE = False
 
 import tensorflow as tf
 tf.get_logger().setLevel('ERROR')
@@ -141,8 +173,48 @@ def ask_smart_assistant(message, pred_result=None, confidence=None):
     except Exception as e:
         return f"⚠️ API Error: {e}\n\nTry asking about symptoms, treatment, or prevention."
 
+
+def login_required(view):
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if 'user' not in session:
+            if request.is_json:
+                return jsonify({'error': 'Authentication required'}), 401
+            return redirect(url_for('login'))
+        return view(*args, **kwargs)
+    return wrapped_view
+
+
+@app.route('/verify-token', methods=['POST'])
+def verify_token():
+    if not FIREBASE_ADMIN_AVAILABLE or firebase_auth is None:
+        return jsonify({'error': 'Auth verification unavailable'}), 503
+
+    data = request.get_json(silent=True) or {}
+    token = data.get('token')
+    if not token:
+        return jsonify({'error': 'Missing ID token'}), 400
+
+    try:
+        decoded_token = firebase_auth.verify_id_token(token)
+        session['user'] = decoded_token.get('uid')
+        return jsonify({'status': 'ok'})
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        session.pop('user', None)
+        return jsonify({'error': 'Invalid or expired auth token'}), 401
+
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)
+    return redirect(url_for('login'))
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html', ai_connected=OPENAI_AVAILABLE)
 
@@ -155,6 +227,7 @@ def signup():
     return render_template('signup.html')
 
 @app.route('/analyze', methods=['POST'])
+@login_required
 def analyze():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
@@ -170,16 +243,17 @@ def analyze():
         return jsonify({'result': result, 'confidence': confidence,
                         'severity': rec['severity'], 'color': rec['color'],
                         'icon': rec['icon'], 'recommendations': rec['recommendations']})
-    except Exception as e:
+    except Exception:
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f"Server Error: {str(e)}"}), 500
+        return jsonify({'error': 'Image processing failed, please try again'}), 500
 
 @app.route('/predict', methods=['POST'])
 def predict_alias():
     return analyze()
 
 @app.route('/chat', methods=['POST'])
+@login_required
 def chat():
     data = request.get_json()
     if not data or not data.get('message', '').strip():

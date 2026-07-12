@@ -3,7 +3,6 @@ import {
   getAuth, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
@@ -186,26 +185,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Handle Google Login/Signup
   const handleGoogleAuth = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-      const user = auth.currentUser;
-      const verified = await verifyCurrentUser(user);
-      if (verified) {
-        window.location.href = '/';
-      } else {
-        showError('Google sign-in failed: unable to verify authentication.');
-        await auth.signOut();
-      }
+      await signInWithRedirect(auth, googleProvider);
     } catch (error) {
-      console.error('Google auth error', error);
-      // Popup blocked fallback
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectError) {
-          console.error('Google redirect error', redirectError);
-          showError("Google redirect sign-in failed: " + redirectError.message.replace('Firebase: ', ''));
-        }
-      } else if (error.code === 'auth/unauthorized-domain') {
+      console.error('Google redirect error', error);
+      if (error.code === 'auth/unauthorized-domain') {
         showError("Google sign-in is blocked because this domain is not authorized in Firebase. Add your Hugging Face Space domain to Firebase Auth authorized domains.");
       } else {
         showError("Google sign-in failed: " + error.code + " — " + error.message.replace('Firebase: ', ''));

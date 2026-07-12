@@ -25,6 +25,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Helper to show errors
   const showError = (message) => {

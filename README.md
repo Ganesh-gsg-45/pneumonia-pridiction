@@ -14,7 +14,7 @@ An AI-powered medical image analysis system combining CNN for pneumonia detectio
 
 ## 🚀 Quick Start
 
-This app uses:
+-u origin mainThis app uses:
 - **TensorFlow CNN** for X-ray analysis
 - **Groq Cloud AI** (LLaMA 3.3 70B) for medical chatbot
 - **Flask** for the web interface

@@ -33,10 +33,65 @@ if GROQ_API_KEY:
 import tensorflow as tf
 tf.get_logger().setLevel('ERROR')
 
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
 # ── Flask app ──────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# ── Database Setup (PostgreSQL with SQLite fallback) ──────────────────────────
+db_url = os.getenv("DATABASE_URL", "sqlite:///pneumovision.db")
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+if db_url.startswith("postgresql://"):
+    try:
+        import psycopg2
+        from urllib.parse import urlparse
+        parsed = urlparse(db_url)
+        conn = psycopg2.connect(
+            dbname=parsed.path[1:] if parsed.path else 'postgres',
+            user=parsed.username,
+            password=parsed.password,
+            host=parsed.hostname or 'localhost',
+            port=parsed.port or 5432,
+            connect_timeout=2
+        )
+        conn.close()
+        print("[DEBUG] PostgreSQL database connection successful!")
+    except Exception as pg_err:
+        print(f"[WARNING] PostgreSQL connection failed ({pg_err}).")
+        print("[INFO] Falling back to SQLite ('sqlite:///pneumovision.db'). To use pgAdmin/PostgreSQL, ensure PostgreSQL is running and the database specified in .env exists.")
+        db_url = "sqlite:///pneumovision.db"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'created_at': self.created_at.strftime('%Y-%m-%d %H:%M:%S') if self.created_at else None
+        }
+
+with app.app_context():
+    db.create_all()
+    print("[DEBUG] Database tables created/verified successfully.")
 
 MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "models", "pneumonia_model_best.h5")
@@ -144,10 +199,79 @@ def ask_smart_assistant(message, pred_result=None, confidence=None):
         return f"⚠️ API Error: {e}\n\nTry asking about symptoms, treatment, or prevention."
 
 
-# ── Routes ────────────────────────────────────────────────────────────────────
+# ── Auth Routes ───────────────────────────────────────────────────────────────
+@app.route('/api/signup', methods=['POST'])
+def signup():
+    data = request.get_json() or {}
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
+
+    if not username or not email or not password:
+        return jsonify({'error': 'Username, email, and password are required'}), 400
+
+    if len(username) < 3:
+        return jsonify({'error': 'Username must be at least 3 characters'}), 400
+
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+    if User.query.filter((User.username == username) | (User.email == email)).first():
+        return jsonify({'error': 'Username or Email already registered'}), 409
+
+    hashed_pw = generate_password_hash(password)
+    new_user = User(username=username, email=email, password_hash=hashed_pw)
+
+    try:
+        db.session.add(new_user)
+        db.session.commit()
+        session['user_id'] = new_user.id
+        session['username'] = new_user.username
+        return jsonify({'message': 'Registration successful', 'user': new_user.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json() or {}
+    identifier = data.get('identifier', '').strip().lower()
+    password = data.get('password', '')
+
+    if not identifier or not password:
+        return jsonify({'error': 'Username/Email and password are required'}), 400
+
+    user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
+
+    if not user or not check_password_hash(user.password_hash, password):
+        return jsonify({'error': 'Invalid credentials'}), 401
+
+    session['user_id'] = user.id
+    session['username'] = user.username
+    return jsonify({'message': 'Login successful', 'user': user.to_dict()})
+
+@app.route('/api/logout', methods=['POST', 'GET'])
+def logout():
+    session.clear()
+    return jsonify({'message': 'Logged out successfully'})
+
+@app.route('/api/me', methods=['GET'])
+def get_current_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'logged_in': False})
+    user = db.session.get(User, user_id)
+    if not user:
+        session.clear()
+        return jsonify({'logged_in': False})
+    return jsonify({'logged_in': True, 'user': user.to_dict()})
+
+# ── Application Routes ────────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    return render_template('index.html', ai_connected=OPENAI_AVAILABLE)
+    user_id = session.get('user_id')
+    user = db.session.get(User, user_id) if user_id else None
+    return render_template('index.html', ai_connected=OPENAI_AVAILABLE, current_user=user.to_dict() if user else None)
 
 @app.route('/analyze', methods=['POST'])
 def analyze():

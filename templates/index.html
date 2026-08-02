@@ -29,7 +29,14 @@
       ℹ️ About
     </button>
   </div>
-  <div class="nav-right">
+  <div class="nav-right" id="navRight">
+    {% if current_user %}
+      <span class="user-badge" id="userBadge">👤 {{ current_user.username }}</span>
+      <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    {% else %}
+      <button class="btn-auth-nav" onclick="openAuthModal('login')">Login</button>
+      <button class="btn-auth-nav btn-auth-signup" onclick="openAuthModal('signup')">Sign Up</button>
+    {% endif %}
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
   </div>
 </nav>
@@ -362,6 +369,53 @@
   🫁 <strong>PneumoVision</strong> &nbsp;|&nbsp; TensorFlow CNN + Groq Cloud AI (LLaMA 3.3 70B) &nbsp;|&nbsp;
   <em>Educational project — not for clinical use</em>
 </footer>
+
+<!-- ── Auth Modal (Login / Sign Up) ────────────────────────── -->
+<div id="authModal" class="auth-modal-backdrop hidden">
+  <div class="auth-modal-card">
+    <button class="auth-modal-close" onclick="closeAuthModal()">✕</button>
+
+    <!-- Login Form -->
+    <div id="loginFormSection">
+      <h2 class="auth-title">🔐 Welcome Back</h2>
+      <p class="auth-subtitle">Login to your PneumoVision account (PostgreSQL DB)</p>
+      <div id="loginError" class="auth-error hidden" style="margin-bottom:14px;"></div>
+
+      <div class="auth-field">
+        <label for="loginIdentifier">Username or Email</label>
+        <input type="text" id="loginIdentifier" placeholder="Enter username or email" required />
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="Enter password" required />
+      </div>
+      <button class="btn-primary auth-submit-btn" onclick="submitLogin()">Login</button>
+      <p class="auth-toggle-text">Don't have an account? <a href="#" onclick="switchAuthTab('signup'); return false;">Sign Up</a></p>
+    </div>
+
+    <!-- Sign Up Form -->
+    <div id="signupFormSection" class="hidden">
+      <h2 class="auth-title">✨ Create Account</h2>
+      <p class="auth-subtitle">Join PneumoVision (Saved to PostgreSQL DB via pgAdmin)</p>
+      <div id="signupError" class="auth-error hidden" style="margin-bottom:14px;"></div>
+
+      <div class="auth-field">
+        <label for="signupUsername">Username</label>
+        <input type="text" id="signupUsername" placeholder="Choose a username" required />
+      </div>
+      <div class="auth-field">
+        <label for="signupEmail">Email Address</label>
+        <input type="email" id="signupEmail" placeholder="Enter your email" required />
+      </div>
+      <div class="auth-field">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="Min. 6 characters" required />
+      </div>
+      <button class="btn-primary auth-submit-btn" onclick="submitSignup()">Create Account</button>
+      <p class="auth-toggle-text">Already have an account? <a href="#" onclick="switchAuthTab('login'); return false;">Login</a></p>
+    </div>
+  </div>
+</div>
 
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>

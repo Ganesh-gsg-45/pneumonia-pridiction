@@ -274,3 +274,110 @@ function autoResize(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
+
+/* ── Auth Functions (Login / Sign Up / Logout) ─────────────────── */
+function openAuthModal(tab = 'login') {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    switchAuthTab(tab);
+  }
+}
+
+function closeAuthModal() {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    document.getElementById('loginError').classList.add('hidden');
+    document.getElementById('signupError').classList.add('hidden');
+  }
+}
+
+function switchAuthTab(tab) {
+  const loginSec = document.getElementById('loginFormSection');
+  const signupSec = document.getElementById('signupFormSection');
+  document.getElementById('loginError').classList.add('hidden');
+  document.getElementById('signupError').classList.add('hidden');
+
+  if (tab === 'signup') {
+    loginSec.classList.add('hidden');
+    signupSec.classList.remove('hidden');
+  } else {
+    signupSec.classList.add('hidden');
+    loginSec.classList.remove('hidden');
+  }
+}
+
+async function submitLogin() {
+  const identifier = document.getElementById('loginIdentifier').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errorDiv = document.getElementById('loginError');
+
+  if (!identifier || !password) {
+    errorDiv.textContent = 'Please enter username/email and password';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errorDiv.textContent = data.error || 'Login failed';
+      errorDiv.classList.remove('hidden');
+    } else {
+      closeAuthModal();
+      window.location.reload();
+    }
+  } catch (err) {
+    errorDiv.textContent = 'Network error: ' + err.message;
+    errorDiv.classList.remove('hidden');
+  }
+}
+
+async function submitSignup() {
+  const username = document.getElementById('signupUsername').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const errorDiv = document.getElementById('signupError');
+
+  if (!username || !email || !password) {
+    errorDiv.textContent = 'All fields are required';
+    errorDiv.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    const data = await res.json();
+
+    if (!res.ok || data.error) {
+      errorDiv.textContent = data.error || 'Registration failed';
+      errorDiv.classList.remove('hidden');
+    } else {
+      closeAuthModal();
+      window.location.reload();
+    }
+  } catch (err) {
+    errorDiv.textContent = 'Network error: ' + err.message;
+    errorDiv.classList.remove('hidden');
+  }
+}
+
+async function handleLogout() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.reload();
+  } catch (err) {
+    alert('Logout failed: ' + err.message);
+  }
+}

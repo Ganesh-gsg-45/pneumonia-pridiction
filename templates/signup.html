@@ -4,26 +4,211 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sign Up — PneumoVision</title>
-  <meta name="description" content="Sign up for PneumoVision AI-powered pneumonia detection system."/>
+  <meta name="description" content="Create your PneumoVision account."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
-</head>
-<body class="auth-page-body">
+  <style>
+    html, body, body.auth-body {
+      margin: 0 !important;
+      padding: 0 !important;
+      min-height: 100vh !important;
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      background: #091924 !important;
+      background: radial-gradient(circle at top, rgba(79,121,247,.16), transparent 24%),
+                  radial-gradient(circle at 100% 10%, rgba(156,110,247,.12), transparent 24%),
+                  linear-gradient(180deg, #07131a 0%, #091924 45%, #0e1f34 100%) !important;
+      font-family: 'Inter', sans-serif !important;
+    }
 
+    .auth-container {
+      width: 100% !important;
+      max-width: 440px !important;
+      margin: auto !important;
+      padding: 40px 36px !important;
+      background: rgba(7, 19, 34, 0.92) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 24px !important;
+      box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      box-sizing: border-box !important;
+    }
+
+    .auth-header {
+      text-align: center !important;
+      margin-bottom: 30px !important;
+    }
+
+    .auth-header .brand-icon {
+      font-size: 3rem !important;
+      margin-bottom: 12px !important;
+      display: block !important;
+    }
+
+    .auth-header h2 {
+      font-size: 1.75rem !important;
+      font-weight: 800 !important;
+      color: #fff !important;
+      margin: 0 0 8px !important;
+    }
+
+    .auth-header p {
+      color: rgba(255, 255, 255, 0.6) !important;
+      font-size: 0.9rem !important;
+      margin: 0 !important;
+      line-height: 1.5 !important;
+    }
+
+    .auth-form {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 18px !important;
+    }
+
+    .form-group {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+
+    .form-group label {
+      font-size: 0.85rem !important;
+      font-weight: 600 !important;
+      color: rgba(255, 255, 255, 0.85) !important;
+    }
+
+    .auth-input {
+      width: 100% !important;
+      padding: 13px 16px !important;
+      border-radius: 12px !important;
+      border: 1px solid rgba(255, 255, 255, 0.14) !important;
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: #fff !important;
+      font-size: 0.95rem !important;
+      font-family: 'Inter', sans-serif !important;
+      outline: none !important;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s !important;
+      box-sizing: border-box !important;
+    }
+
+    .auth-input::placeholder {
+      color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    .auth-input:focus {
+      border-color: rgba(99, 102, 241, 0.9) !important;
+      background: rgba(255, 255, 255, 0.12) !important;
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15) !important;
+    }
+
+    .auth-btn {
+      width: 100% !important;
+      padding: 14px !important;
+      font-size: 1rem !important;
+      font-weight: 700 !important;
+      font-family: 'Inter', sans-serif !important;
+      border: none !important;
+      border-radius: 12px !important;
+      cursor: pointer !important;
+      transition: opacity 0.2s, transform 0.1s !important;
+    }
+
+    .auth-btn:active { transform: scale(0.98) !important; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+      color: #fff !important;
+    }
+
+    .btn-primary:hover { opacity: 0.9 !important; }
+    .btn-primary:disabled { opacity: 0.55 !important; cursor: not-allowed !important; }
+
+    .auth-divider {
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      margin: 12px 0 !important;
+      color: rgba(255, 255, 255, 0.4) !important;
+      font-size: 0.8rem !important;
+      font-weight: 600 !important;
+      letter-spacing: 0.08em !important;
+    }
+
+    .auth-divider::before,
+    .auth-divider::after {
+      content: '' !important;
+      flex: 1 !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14) !important;
+    }
+
+    .btn-google {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 12px !important;
+      background: #fff !important;
+      color: #3c4043 !important;
+      border: 1px solid #dadce0 !important;
+      font-size: 0.95rem !important;
+      font-weight: 600 !important;
+      text-decoration: none !important;
+      transition: background 0.2s, box-shadow 0.2s !important;
+    }
+
+    .btn-google:hover {
+      background: #f8f9fa !important;
+      box-shadow: 0 2px 8px rgba(60, 64, 67, 0.25) !important;
+    }
+
+    .google-icon { width: 20px !important; height: 20px !important; flex-shrink: 0 !important; }
+
+    .auth-error {
+      background: rgba(239, 68, 68, 0.15) !important;
+      border: 1px solid rgba(239, 68, 68, 0.3) !important;
+      color: #f87171 !important;
+      padding: 11px 14px !important;
+      border-radius: 10px !important;
+      font-size: 0.85rem !important;
+      text-align: center !important;
+    }
+
+    .auth-footer {
+      margin-top: 24px !important;
+      text-align: center !important;
+      font-size: 0.875rem !important;
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
+
+    .auth-link {
+      color: #818cf8 !important;
+      font-weight: 600 !important;
+      text-decoration: none !important;
+      transition: color 0.2s !important;
+    }
+
+    .auth-link:hover { color: #a5b4fc !important; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body class="auth-body">
   <div class="auth-container">
     <div class="auth-header">
-      <div class="brand-icon">🫁</div>
+      <span class="brand-icon">🫁</span>
       <h2>Create Account</h2>
-      <p>Sign up to access PneumoVision AI X-Ray analysis & Medical Assistant</p>
+      <p>Sign up to access PneumoVision AI X-Ray analysis &amp; Medical Assistant</p>
     </div>
 
-    <div id="authError" class="auth-error hidden" style="margin-bottom: 16px;"></div>
+    <div id="authError" class="auth-error hidden" style="margin-bottom: 18px;"></div>
 
     <form class="auth-form" id="signupForm" onsubmit="handleFormSignup(event)">
       <div class="form-group">
         <label for="username">Username</label>
-        <input type="text" id="username" class="auth-input" placeholder="Choose a username" required minlength="3" autocomplete="username"/>
+        <input type="text" id="username" class="auth-input" placeholder="Choose a username (min 3 chars)" required minlength="3" autocomplete="username"/>
       </div>
 
       <div class="form-group">
@@ -39,9 +224,7 @@
       <button type="submit" class="btn-primary auth-btn" id="submitBtn">Create Account</button>
     </form>
 
-    <div class="auth-divider">
-      <span>OR</span>
-    </div>
+    <div class="auth-divider"><span>OR</span></div>
 
     <a href="/login/google" class="btn-google auth-btn">
       <svg class="google-icon" viewBox="0 0 24 24">
@@ -54,25 +237,25 @@
     </a>
 
     <div class="auth-footer">
-      Already have an account? <a href="{{ url_for('login_page') }}" class="auth-link">Sign In</a>
+      Already have an account? <a href="/login" class="auth-link">Sign In</a>
     </div>
   </div>
 
   <script>
     async function handleFormSignup(e) {
       e.preventDefault();
-      const username = document.getElementById('username').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      const errorDiv = document.getElementById('authError');
-      const btn = document.getElementById('submitBtn');
+      const username  = document.getElementById('username').value.trim();
+      const email     = document.getElementById('email').value.trim();
+      const password  = document.getElementById('password').value;
+      const errorDiv  = document.getElementById('authError');
+      const btn       = document.getElementById('submitBtn');
 
       errorDiv.classList.add('hidden');
       btn.disabled = true;
       btn.textContent = 'Creating account…';
 
       try {
-        const res = await fetch('/api/signup', {
+        const res  = await fetch('/api/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password })

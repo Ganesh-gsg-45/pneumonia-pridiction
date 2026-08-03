@@ -277,10 +277,10 @@ function autoResize(el) {
 
 /* ── Auth Functions (Login / Sign Up / Logout) ─────────────────── */
 function openAuthModal(tab = 'login') {
-  const modal = document.getElementById('authModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    switchAuthTab(tab);
+  if (tab === 'signup') {
+    window.location.href = '/signup';
+  } else {
+    window.location.href = '/login';
   }
 }
 

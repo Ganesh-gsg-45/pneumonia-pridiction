@@ -1,6 +1,10 @@
-import os, io, warnings, logging, json
+import os, io, warnings, logging, json, sys
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 from functools import wraps
-from flask import Flask, render_template, request, jsonify
 from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
@@ -16,7 +20,7 @@ _ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=_ENV, override=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-print(f"[DEBUG] GROQ_API_KEY loaded: {'YES' if GROQ_API_KEY else 'NOT FOUND ❌'}")
+print(f"[DEBUG] GROQ_API_KEY loaded: {'YES' if GROQ_API_KEY else 'NOT FOUND'}")
 OPENAI_AVAILABLE = False
 client = None
 
@@ -267,10 +271,10 @@ def google_callback():
             # New account via Google — generate a unique username
             base_username = name.replace(' ', '').lower()[:70] or email.split('@')[0]
             username = base_username
-            suffix = 1
+            suffix = 2
             while User.query.filter_by(username=username).first():
-                suffix += 1
                 username = f"{base_username}{suffix}"
+                suffix += 1
 
             user = User(username=username, email=email, google_id=google_id, password_hash=None)
             db.session.add(user)
@@ -323,7 +327,12 @@ def login():
     if not identifier or not password:
         return jsonify({'error': 'Username/Email and password are required'}), 400
 
-    user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
+    identifier_lower = identifier  # already lowercased above
+    from sqlalchemy import func
+    user = User.query.filter(
+        (func.lower(User.email) == identifier_lower) |
+        (func.lower(User.username) == identifier_lower)
+    ).first()
 
     if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
@@ -400,8 +409,8 @@ def chat():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7860))
-    print("🫁  PneumoVision — Flask")
-    print(f"   Groq AI      : {'✅ Connected' if OPENAI_AVAILABLE else '❌ Set GROQ_API_KEY in .env'}")
-    print(f"   Model        : {'✅ Found' if os.path.exists(MODEL_PATH) else '❌ Not found'}")
-    print(f"   Listening on : 0.0.0.0:{port}")
+    print("[+] PneumoVision -- Flask")
+    print(f"    Groq AI      : {'[OK] Connected' if OPENAI_AVAILABLE else '[!] Set GROQ_API_KEY in .env'}")
+    print(f"    Model        : {'[OK] Found' if os.path.exists(MODEL_PATH) else '[!] Not found'}")
+    print(f"    Listening on : http://0.0.0.0:{port}")
     app.run(debug=False, host='0.0.0.0', port=port)

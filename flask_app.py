@@ -325,7 +325,7 @@ def login():
 
     user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
 
-    if not user or not check_password_hash(user.password_hash, password):
+    if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
 
     session['user_id'] = user.id

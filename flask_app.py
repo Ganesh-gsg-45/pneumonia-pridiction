@@ -1,10 +1,13 @@
 import os, io, warnings, logging, json, sys
-if sys.platform == 'win32':
+
+# Fix Windows terminal Unicode encoding issue (emojis crash cp1252 terminals)
+if sys.stdout.encoding and sys.stdout.encoding.lower() != 'utf-8':
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     except Exception:
         pass
 from functools import wraps
+from flask import Flask, render_template, request, jsonify
 from PIL import Image
 import numpy as np
 from dotenv import load_dotenv
@@ -20,7 +23,7 @@ _ENV = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
 load_dotenv(dotenv_path=_ENV, override=True)
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-print(f"[DEBUG] GROQ_API_KEY loaded: {'YES' if GROQ_API_KEY else 'NOT FOUND'}")
+print(f"[DEBUG] GROQ_API_KEY loaded: {'YES' if GROQ_API_KEY else 'NOT FOUND ❌'}")
 OPENAI_AVAILABLE = False
 client = None
 
@@ -41,13 +44,31 @@ tf.get_logger().setLevel('ERROR')
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from datetime import datetime
 from authlib.integrations.flask_client import OAuth
 
 # ── Flask app ──────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+# IMPORTANT: os.urandom(24) changes on every restart, invalidating sessions
+# and causing CSRF mismatches in OAuth. Use a stable fallback instead.
+_raw_secret = os.environ.get('SECRET_KEY')
+if not _raw_secret:
+    import hashlib
+    _raw_secret = hashlib.sha256(b'pneumovision-stable-dev-key-2024').hexdigest()
+    print("[WARNING] SECRET_KEY not set in .env — using stable fallback. Set SECRET_KEY in .env for production.")
+app.secret_key = _raw_secret
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+
+# Correctly interpret requests coming through Hugging Face's reverse proxy
+# (scheme, host) — important for reliable session cookie behavior behind
+# a proxy that terminates HTTPS in front of the container.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# Secure cookies required for HTTPS (Hugging Face Spaces uses HTTPS)
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('HF_SPACE_ID') is not None
 
 # ── Google OAuth setup ────────────────────────────────────────────────────────
 oauth = OAuth(app)
@@ -108,6 +129,18 @@ class User(db.Model):
 
 with app.app_context():
     db.create_all()
+    # ── Schema migration: add google_id if it was added after the DB was created ──
+    try:
+        from sqlalchemy import text, inspect as sa_inspect
+        inspector = sa_inspect(db.engine)
+        existing_cols = [col['name'] for col in inspector.get_columns('users')]
+        if 'google_id' not in existing_cols:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE users ADD COLUMN google_id VARCHAR(255) UNIQUE"))
+                conn.commit()
+            print("[DEBUG] Migration applied: added 'google_id' column to users table.")
+    except Exception as _mig_err:
+        print(f"[WARNING] Migration check failed (non-fatal): {_mig_err}")
     print("[DEBUG] Database tables created/verified successfully.")
 
 # ── login_required decorator ──────────────────────────────────────────────────
@@ -250,7 +283,16 @@ def google_login():
 
 @app.route('/login/google/callback')
 def google_callback():
-    token = oauth.google.authorize_access_token()
+    try:
+        token = oauth.google.authorize_access_token()
+    except Exception as oauth_err:
+        print(f"[WARNING] Google OAuth callback error: {oauth_err}")
+        from flask import flash
+        try:
+            flash('Google sign-in failed or session expired. Please try again.', 'error')
+        except Exception:
+            pass
+        return redirect(url_for('login_page'))
     userinfo = token.get('userinfo')
     if not userinfo:
         return redirect(url_for('login_page'))
@@ -271,10 +313,10 @@ def google_callback():
             # New account via Google — generate a unique username
             base_username = name.replace(' ', '').lower()[:70] or email.split('@')[0]
             username = base_username
-            suffix = 2
+            suffix = 1
             while User.query.filter_by(username=username).first():
-                username = f"{base_username}{suffix}"
                 suffix += 1
+                username = f"{base_username}{suffix}"
 
             user = User(username=username, email=email, google_id=google_id, password_hash=None)
             db.session.add(user)
@@ -327,12 +369,7 @@ def login():
     if not identifier or not password:
         return jsonify({'error': 'Username/Email and password are required'}), 400
 
-    identifier_lower = identifier  # already lowercased above
-    from sqlalchemy import func
-    user = User.query.filter(
-        (func.lower(User.email) == identifier_lower) |
-        (func.lower(User.username) == identifier_lower)
-    ).first()
+    user = User.query.filter((User.email == identifier) | (User.username == identifier)).first()
 
     if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
@@ -409,8 +446,9 @@ def chat():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 7860))
-    print("[+] PneumoVision -- Flask")
-    print(f"    Groq AI      : {'[OK] Connected' if OPENAI_AVAILABLE else '[!] Set GROQ_API_KEY in .env'}")
-    print(f"    Model        : {'[OK] Found' if os.path.exists(MODEL_PATH) else '[!] Not found'}")
-    print(f"    Listening on : http://0.0.0.0:{port}")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    print("PneumoVision -- Flask App")
+    print(f"   Groq AI      : {'[OK] Connected' if OPENAI_AVAILABLE else '[!] Set GROQ_API_KEY in .env'}")
+    print(f"   Model        : {'[OK] Found' if os.path.exists(MODEL_PATH) else '[!] Not found'}")
+    print(f"   SECRET_KEY   : {'[OK] Set from environment' if os.environ.get('SECRET_KEY') else '[!] NOT SET -- using a random key, sessions will break on restart!'}")
+    print(f"   Listening on : 0.0.0.0:{port}")
+    app.run(debug=True, host='0.0.0.0', port=port)

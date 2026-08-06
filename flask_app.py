@@ -67,8 +67,9 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-# Secure cookies required for HTTPS (Hugging Face Spaces uses HTTPS)
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('HF_SPACE_ID') is not None
+# Secure cookies required for HTTPS. Hugging Face Spaces sets SPACE_ID
+# automatically at runtime (not HF_SPACE_ID, which doesn't exist).
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SPACE_ID') is not None
 
 # ── Google OAuth setup ────────────────────────────────────────────────────────
 oauth = OAuth(app)

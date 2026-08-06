@@ -81,10 +81,21 @@ oauth.register(
 )
 
 # ── Database Setup (PostgreSQL with SQLite fallback) ──────────────────────────
-db_url = os.getenv("DATABASE_URL", "sqlite:///pneumovision.db")
-if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+_raw_db_url = os.getenv("DATABASE_URL", "").strip()
 
+# Normalise legacy postgres:// scheme used by Heroku / some cloud providers
+if _raw_db_url.startswith("postgres://"):
+    _raw_db_url = _raw_db_url.replace("postgres://", "postgresql://", 1)
+
+# If the env var is missing, empty, or not a valid scheme → use SQLite
+if not _raw_db_url or not (_raw_db_url.startswith("postgresql://") or
+                            _raw_db_url.startswith("sqlite://")):
+    print("[INFO] DATABASE_URL not set or invalid — using SQLite (sqlite:///pneumovision.db).")
+    db_url = "sqlite:///pneumovision.db"
+else:
+    db_url = _raw_db_url
+
+# If a PostgreSQL URL was given, verify the server is actually reachable
 if db_url.startswith("postgresql://"):
     try:
         import psycopg2
@@ -102,11 +113,17 @@ if db_url.startswith("postgresql://"):
         print("[DEBUG] PostgreSQL database connection successful!")
     except Exception as pg_err:
         print(f"[WARNING] PostgreSQL connection failed ({pg_err}).")
-        print("[INFO] Falling back to SQLite ('sqlite:///pneumovision.db'). To use pgAdmin/PostgreSQL, ensure PostgreSQL is running and the database specified in .env exists.")
+        print("[INFO] Falling back to SQLite ('sqlite:///pneumovision.db').")
         db_url = "sqlite:///pneumovision.db"
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+if db_url.startswith("postgresql://"):
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,
+        'pool_recycle': 280,
+    }
 
 db = SQLAlchemy(app)
 
